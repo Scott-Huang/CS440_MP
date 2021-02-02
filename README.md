@@ -1,2 +1,2 @@
-# CS440_MP1
-CS440 Artificial Intelligence MP1 Search
+# CS440_MP
+CS440 Artificial Intelligence coursework
