@@ -1,3 +1,5 @@
+from collections import deque
+
 # search.py
 # ---------------
 # Licensing Information:  You are free to use or extend this projects for
