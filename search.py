@@ -66,6 +66,16 @@ def bfs(maze):
     ret.reverse()
     return ret
 
+def shorter(x, y, gh): # return true if x is shorter than y heriustically
+    if gh(x) < gh(y):
+        return True
+    return False
+def insert(x, list, gh):
+    for i in range(len(list)):
+        if shorter(x, list[i], gh):
+            list.insert(i, x)
+            return
+    list.append(x)
 
 def astar_single(maze):
     """
@@ -75,7 +85,50 @@ def astar_single(maze):
 
     @return path: a list of tuples containing the coordinates of each state in the computed path
     """
-    return []
+
+    explored = []
+    states = {} # {postion: (parent, cost)}
+    queue = []
+    target = maze.waypoints[0]
+    def h(x):
+        return abs(x[0]-target[0]) + abs(x[1]-target[1])
+    def gh(x):
+        #print(x)
+        #print(h(x))
+        #print(states[x])
+        return h(x) + states[x][1]
+
+    queue.append(maze.start)
+    states[maze.start] = (None, 0)
+    explored.append(maze.start)
+
+    while queue:
+        node = queue[0]
+        queue.pop(0)
+        if node == target:
+            break
+
+        neighbors = maze.neighbors(node[0], node[1])
+        parent, cost = states[node]
+        cost += 1
+        for neighbor in neighbors:
+            if maze.navigable(neighbor[0], neighbor[1]):
+                if neighbor in explored:
+                    if cost < states[neighbor][1]:
+                        states[neighbor] = (node, cost)
+                else:
+                    states[neighbor] = (node, cost)
+                    insert(neighbor, queue, gh)
+                    explored.append(neighbor)
+
+    ret = []
+    if node == target:
+        while states[node][0] != None:
+            ret.append(node)
+            node = states[node][0]
+        ret.append(node) # append the last node
+    ret.reverse()
+    return ret
 
 def astar_corner(maze):
     """
