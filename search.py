@@ -1,4 +1,5 @@
 from collections import deque
+from copy import deepcopy
 
 # search.py
 # ---------------
@@ -130,6 +131,17 @@ def astar_single(maze):
     ret.reverse()
     return ret
 
+def manhatten(x,y):
+    return abs(x[0]-y[0]) + abs(x[1]-y[1])
+def find_closet(x, list):
+    min = 9999
+    temp = None
+    for i in list:
+        d = manhatten(x, i)
+        if min > d:
+            min = d
+            temp = i
+    return temp, min
 def astar_corner(maze):
     """
     Runs A star for part 3 of the assignment in the case where there are four corner objectives.
@@ -138,27 +150,13 @@ def astar_corner(maze):
 
     @return path: a list of tuples containing the coordinates of each state in the computed path
     """
-    def manhatten(x,y):
-        #print(x,y)
-        return abs(x[0]-y[0]) + abs(x[1]-y[1])
-    def find_closet(x, list):
-        min = 9999
-        index = 0
-        for i in range(len(list)):
-            d = manhatten(x, list[i])
-            if min > d:
-                min = d
-                index = i
-        return list[index]
     def h(x):
         list = x.goals.copy()
-        temp = find_closet(x.position, list)
-        d = manhatten(x.position, temp)
+        temp,d = find_closet(x.position, list)
         list.remove(temp)
         while list:
-            old = temp
-            temp = find_closet(old, list)
-            d += manhatten(old, temp)
+            temp, dist = find_closet(temp, list)
+            d += dist
             list.remove(temp)
         return d
     def gh(x):
@@ -199,7 +197,6 @@ def astar_corner(maze):
     ret.reverse()
     return ret
 
-
 def astar_multiple(maze):
     """
     Runs A star for part 4 of the assignment in the case where there are
@@ -209,7 +206,124 @@ def astar_multiple(maze):
 
     @return path: a list of tuples containing the coordinates of each state in the computed path
     """
-    return []
+    MST_table = {}
+    def single_search(start, end):
+        explored = []
+        states = {} # {postion: (parent, cost)}
+        queue = []
+
+        def gh(x):
+            return manhatten(x, end) + states[x][1]
+
+        queue.append(start)
+        states[start] = (None, 0)
+        explored.append(start)
+
+        while queue:
+            node = queue[0]
+            queue.pop(0)
+            if node == end:
+                break
+
+            neighbors = maze.neighbors(node[0], node[1])
+            parent, cost = states[node]
+            cost += 1
+            for neighbor in neighbors:
+                if maze.navigable(neighbor[0], neighbor[1]):
+                    if neighbor in explored:
+                        if cost < states[neighbor][1]:
+                            states[neighbor] = (node, cost)
+                    else:
+                        states[neighbor] = (node, cost)
+                        insert(neighbor, queue, gh)
+                        explored.append(neighbor)
+
+        ret = []
+        while states[node][0] != None:
+            ret.append(node)
+            node = states[node][0]
+        ret.reverse()
+        return ret
+    search_table = {}
+    def find_closet2(x, list):
+        min = 9999
+        temp = None
+        for i in list:
+            d = manhatten(x, i)
+            if min > d:
+                if (x,i) in search_table.keys():
+                    d = search_table[(x,i)]
+                else:
+                    d = len(single_search(x, i))
+                    search_table[(x,i)] = d
+                if min > d:
+                    min = d
+                    temp = i
+        return temp, min
+    
+    def find_closet_among(list1, list2):
+        min = 9999
+        minNode = None
+        for i in list1:
+            temp, d = find_closet2(i, list2)
+            if min > d:
+                min = d
+                minNode = temp
+        return minNode, min
+    def h(x):
+        temp, d = find_closet2(x.position, x.goals)
+        if x.goals in MST_table.keys():
+            return MST_table[x.goals] + d
+        l = list(x.goals)
+        connected = [temp]
+        l.remove(temp)
+
+        dist = 0
+        while l:
+            temp, disttemp = find_closet_among(connected, l)
+            l.remove(temp)
+            connected.append(temp)
+            dist += disttemp
+        MST_table[x.goals] = dist
+        return dist + d
+    def gh(x):
+        return h(x) + x.cost
+
+    start = Node(maze.start, 0, maze.waypoints)
+    states = {}
+    for position in maze.indices():
+        states[position] = []
+    states[start.position].append(start)
+    queue = [start]
+    loop = 0
+    while queue:
+        node = queue[0]
+        queue.pop(0)
+        if node.position in node.goals:
+            l = list(node.goals)
+            l.remove(node.position)
+            node.goals = tuple(l)
+            if not node.goals:
+                break
+        
+        neighbors = maze.neighbors(node.position[0], node.position[1])
+        cost = node.cost + 1
+        for neighbor in neighbors:
+            if maze.navigable(neighbor[0], neighbor[1]):
+                temp = find(states, neighbor, deepcopy(node.goals))
+                if temp:
+                    if cost < temp.cost:
+                        temp.update(node, cost)
+                else:
+                    temp = Node(neighbor, cost, deepcopy(node.goals), node)
+                    states[neighbor].append(temp)
+                    insert(temp, queue, gh)
+    ret = []
+    while node != None:
+        ret.append(node.position)
+        node = node.parent
+    ret.reverse()
+    return ret
 
 def fast(maze):
     """
