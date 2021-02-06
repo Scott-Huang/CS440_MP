@@ -22,15 +22,19 @@ files and classes when code is run, so be careful to not modify anything else.
 
 
 class Node:
-    def __init__(self, position=(0,0), cost=0, pastNode=None):
+    def __init__(self, position=(0,0), cost=0, goals=None, pastNode=None):
         self.position = position
-        self.pastNode = pastNode
+        self.parent = pastNode
         self.cost = cost
+        self.goals = goals
     def update(self, pastNode, cost):
-        self.pastNode = pastNode
+        self.parent = pastNode
         self.cost = cost
-    def __repr__(self):
-        return str(self.position)
+def find(list, position, goals):
+    for i in list[position]:
+        if i.goals == goals:
+            return i
+    return None
 
 def bfs(maze):
     """
@@ -55,14 +59,13 @@ def bfs(maze):
         neighbors = maze.neighbors(node.position[0], node.position[1])
         for neighbor in neighbors:
             if maze.navigable(neighbor[0], neighbor[1]) and neighbor not in explored:
-                queue.append(Node(neighbor, 0, node))
+                queue.append(Node(neighbor, 0, None, node))
                 explored.append(neighbor)
 
     ret = []
-    if node.position == target:
-        while node != None:
-            ret.append(node.position)
-            node = node.pastNode
+    while node != None:
+        ret.append(node.position)
+        node = node.parent
     ret.reverse()
     return ret
 
@@ -136,71 +139,64 @@ def astar_corner(maze):
     @return path: a list of tuples containing the coordinates of each state in the computed path
     """
     def manhatten(x,y):
+        #print(x,y)
         return abs(x[0]-y[0]) + abs(x[1]-y[1])
     def find_closet(x, list):
         min = 9999
         index = 0
         for i in range(len(list)):
-            d = manhatten(x,list[i])
+            d = manhatten(x, list[i])
             if min > d:
                 min = d
                 index = i
         return list[index]
-    
-    targets = list(maze.waypoints)
-    
     def h(x):
-        list = targets.copy()
-        temp = find_closet(x, list)
-        d = manhatten(x, temp)
+        list = x.goals.copy()
+        temp = find_closet(x.position, list)
+        d = manhatten(x.position, temp)
         list.remove(temp)
-        for i in range(len(list)):
-            temp = find_closet(x, list)
-            d += manhatten(x, temp)
+        while list:
+            old = temp
+            temp = find_closet(old, list)
+            d += manhatten(old, temp)
+            list.remove(temp)
         return d
+    def gh(x):
+        return h(x) + x.cost
     
-    def search_oneway(start):
-        explored = [start]
-        states = {start: (None, 0)}
-        queue = [start]
-
-        def gh(x):
-            return h(x) + states[x][1]
-
-        while queue:
-            node = queue[0]
-            queue.pop(0)
-            if node in targets:
-                targets.remove(node)
-                print("target found")
+    start = Node(maze.start, 0, list(maze.waypoints))
+    states = {}
+    for position in maze.indices():
+        states[position] = []
+    states[start.position].append(start)
+    queue = [start]
+    
+    while queue:
+        node = queue[0]
+        queue.pop(0)
+        if node.position in node.goals:
+            node.goals.remove(node.position)
+            if not node.goals:
                 break
+        
+        neighbors = maze.neighbors(node.position[0], node.position[1])
+        cost = node.cost + 1
+        for neighbor in neighbors:
+            if maze.navigable(neighbor[0], neighbor[1]):
+                temp = find(states, neighbor, node.goals)
+                if temp:
+                    if cost < temp.cost:
+                        temp.update(node, cost)
+                else:
+                    temp = Node(neighbor, cost, node.goals.copy(), node)
+                    states[neighbor].append(temp)
+                    insert(temp, queue, gh)
 
-            neighbors = maze.neighbors(node[0], node[1])
-            cost = states[node][1] + 1
-            for neighbor in neighbors:
-                if maze.navigable(neighbor[0], neighbor[1]):
-                    if neighbor in explored:
-                        if cost < states[neighbor][1]:
-                            states[neighbor] = (node, cost)
-                    else:
-                        states[neighbor] = (node, cost)
-                        insert(neighbor, queue, gh)
-                        explored.append(neighbor)
-        retnode = node
-        retlist = []
-        while states[node][0] != None:
-            retlist.append(node)
-            node = states[node][0]
-        retlist.reverse()
-        return retnode, retlist
-    
-    node = maze.start
     ret = []
-    while targets:
-        print("search with ", len(targets), " nodes.")
-        node, l = search_oneway(node)
-        ret += l
-    ret.insert(0, maze.start)
+    while node != None:
+        ret.append(node.position)
+        node = node.parent
+    ret.reverse()
     return ret
 
 
