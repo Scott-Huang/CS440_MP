@@ -93,9 +93,6 @@ def astar_single(maze):
     def h(x):
         return abs(x[0]-target[0]) + abs(x[1]-target[1])
     def gh(x):
-        #print(x)
-        #print(h(x))
-        #print(states[x])
         return h(x) + states[x][1]
 
     queue.append(maze.start)
@@ -137,8 +134,75 @@ def astar_corner(maze):
     @param maze: The maze to execute the search on.
 
     @return path: a list of tuples containing the coordinates of each state in the computed path
-        """
-    return []
+    """
+    def manhatten(x,y):
+        return abs(x[0]-y[0]) + abs(x[1]-y[1])
+    def find_closet(x, list):
+        min = 9999
+        index = 0
+        for i in range(len(list)):
+            d = manhatten(x,list[i])
+            if min > d:
+                min = d
+                index = i
+        return list[index]
+    
+    targets = list(maze.waypoints)
+    
+    def h(x):
+        list = targets.copy()
+        temp = find_closet(x, list)
+        d = manhatten(x, temp)
+        list.remove(temp)
+        for i in range(len(list)):
+            temp = find_closet(x, list)
+            d += manhatten(x, temp)
+        return d
+    
+    def search_oneway(start):
+        explored = [start]
+        states = {start: (None, 0)}
+        queue = [start]
+
+        def gh(x):
+            return h(x) + states[x][1]
+
+        while queue:
+            node = queue[0]
+            queue.pop(0)
+            if node in targets:
+                targets.remove(node)
+                print("target found")
+                break
+
+            neighbors = maze.neighbors(node[0], node[1])
+            cost = states[node][1] + 1
+            for neighbor in neighbors:
+                if maze.navigable(neighbor[0], neighbor[1]):
+                    if neighbor in explored:
+                        if cost < states[neighbor][1]:
+                            states[neighbor] = (node, cost)
+                    else:
+                        states[neighbor] = (node, cost)
+                        insert(neighbor, queue, gh)
+                        explored.append(neighbor)
+        retnode = node
+        retlist = []
+        while states[node][0] != None:
+            retlist.append(node)
+            node = states[node][0]
+        retlist.reverse()
+        return retnode, retlist
+    
+    node = maze.start
+    ret = []
+    while targets:
+        print("search with ", len(targets), " nodes.")
+        node, l = search_oneway(node)
+        ret += l
+    ret.insert(0, maze.start)
+    return ret
+
 
 def astar_multiple(maze):
     """
