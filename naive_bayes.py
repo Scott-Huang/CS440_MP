@@ -63,12 +63,12 @@ def naiveBayes(train_set, train_labels, dev_set, smoothing_parameter, pos_prior)
 
     # function for calculate probability of P(class | words)
     def email(words):
-        ret = log(emailProb)
+        ret = log(pos_prior)
         for word in words:
             ret += log(email_prob(word))
         return ret
     def spam(words):
-        ret = log(spamProb)
+        ret = log(1-pos_prior)
         for word in words:
             ret += log(spam_prob(word))
         return ret
