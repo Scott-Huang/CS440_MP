@@ -13,7 +13,8 @@ within this file for Part 1 -- the unrevised staff files will be used for all ot
 files and classes when code is run, so be careful to not modify anything else.
 """
 
-
+from collections import Counter
+from math import log
 
 def naiveBayes(train_set, train_labels, dev_set, smoothing_parameter, pos_prior):
     """
@@ -34,8 +35,50 @@ def naiveBayes(train_set, train_labels, dev_set, smoothing_parameter, pos_prior)
     # TODO: Write your code here
     # return predicted labels of development set
 
+    # calculate the number of presences of words in each class
+    spam_words = Counter()
+    email_words = Counter()
+    email_num = 0
+    spam_num = 0
+    for i in range(len(train_labels)):
+        if train_labels[i]:
+            email_words.update(train_set[i])
+            email_num += 1
+        else:
+            spam_words.update(train_set[i])
+            spam_num += 1
 
+    # get the total words number
+    spam_words_num = sum(spam_words.values())
+    email_words_num = sum(email_words.values())
+    # get prob for each class
+    emailProb = email_num / (email_num + spam_num)
+    spamProb = spam_num / (email_num + spam_num)
 
+    # function for probability of P(word | class)   
+    def email_prob(word):
+        return (email_words[word] + smoothing_parameter) / (email_words_num + smoothing_parameter * len(email_words))
+    def spam_prob(word):
+        return (spam_words[word] + smoothing_parameter) / (spam_words_num + smoothing_parameter * len(spam_words))
 
-    return []
+    # function for calculate probability of P(class | words)
+    def email(words):
+        ret = log(emailProb)
+        for word in words:
+            ret += log(email_prob(word))
+        return ret
+    def spam(words):
+        ret = log(spamProb)
+        for word in words:
+            ret += log(spam_prob(word))
+        return ret
+
+    # compare the probability for testing data set
+    ret = []
+    for words in dev_set:
+        if email(words) > spam(words):
+            ret.append(1)
+        else:
+            ret.append(0)
+    return ret
     
