@@ -108,9 +108,9 @@ def naiveBayesMixture(train_set, train_labels, dev_set, bigram_lambda,unigram_sm
 
     # functions calculating probability for each class
     def email_prob(words):
-        return bigram_lambda * email_bi(words)# + (1-bigram_lambda) * email_uni(words)
+        return bigram_lambda * email_bi(words) + (1-bigram_lambda) * email_uni(words)
     def spam_prob(words):
-        return bigram_lambda * spam_bi(words)# + (1-bigram_lambda) * spam_uni(words)
+        return bigram_lambda * spam_bi(words) + (1-bigram_lambda) * spam_uni(words)
 
     # applay the trained model on the testing set
     ret = []
