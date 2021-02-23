@@ -45,32 +45,24 @@ def naiveBayesMixture(train_set, train_labels, dev_set, bigram_lambda,unigram_sm
     # get prob for unigram
     spam_uniwords = Counter()
     email_uniwords = Counter()
-    for words, label in zip(train_set, train_labels):
-        if label:
-            email_uniwords.update(words)
-        else:
-            spam_uniwords.update(words)
-
-    # get the total uni words number
-    spam_uniwords_num = sum(spam_uniwords.values())
-    email_uniwords_num = sum(email_uniwords.values())
-
     spam_biwords = Counter()
     email_biwords = Counter()
     for words, label in zip(train_set, train_labels):
         bigrams = zip(words[:-1], words[1:])
         if label:
+            email_uniwords.update(words)
             email_biwords.update(bigrams)
         else:
+            spam_uniwords.update(words)
             spam_biwords.update(bigrams)
+        
 
+    # get the total uni words number
+    spam_uniwords_num = sum(spam_uniwords.values())
+    email_uniwords_num = sum(email_uniwords.values())         
     # get the total bi words number
     spam_biwords_num = sum(spam_biwords.values())
     email_biwords_num = sum(email_biwords.values())
-    #print("uni num ", len(spam_uniwords), len(email_uniwords))
-    #print("bi num ", len(spam_biwords), len(email_biwords))
-    #print(email_biwords.most_common(30))
-    #print(email_uniwords.most_common(30))
 
     # function for probability of P(biword | class)   
     def email_uniprob(word):
@@ -115,7 +107,7 @@ def naiveBayesMixture(train_set, train_labels, dev_set, bigram_lambda,unigram_sm
     # applay the trained model on the testing set
     ret = []
     for words in dev_set:
-        if email_uni(words) > spam_uni(words):
+        if email_prob(words) >= spam_prob(words):
             ret.append(1)
         else:
             ret.append(0)
